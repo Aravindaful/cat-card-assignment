@@ -1,8 +1,8 @@
-const { MergeStrategyFactory } = require("./mergeStrategyFactory");
-const { FileSaver } = require("./utils/fileSaver");
-const CONSTANT = require("./config/contant");
+import { MergeStrategyFactory } from "./mergeStrategyFactory.js";
+import { FileSaver } from "./utils/fileSaver.js";
+import { CONSTANT } from "./config/contant.js";
 
-class App {
+export class App {
   constructor(greeting, who, width, height, color, size, fileName) {
     this.greeting = greeting || CONSTANT.GREETING;
     this.who = who ?? CONSTANT.WHO;
@@ -25,12 +25,31 @@ class App {
         this.color,
         this.size
       );
-      const mergedFile = await mergeStrategy.merge();
-      await FileSaver.save(mergedFile, this.fileName);
+      const downloadedFiles = await mergeStrategy
+        .getDownloadedFiles()
+        .catch((err) => {
+          throw err;
+        });
+
+      const mergedFile = await mergeStrategy
+        .merge(downloadedFiles)
+        .catch((err) => {
+          throw err;
+        });
+
+      const fileSaveLocation = mergeStrategy.getFileSaveLocation();
+      if (!fileSaveLocation) {
+        console.warn("File save location not found!");
+        throw new Error(`File save location not found!`);
+      }
+
+      await FileSaver.save(mergedFile, this.fileName, fileSaveLocation).catch(
+        (err) => {
+          throw err;
+        }
+      );
     } catch (err) {
-      throw new Error("Error while merging files: " + err.message);
+      throw new Error(`Error while merging files: ${err.message}`);
     }
   }
 }
-
-module.exports = { App };

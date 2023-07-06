@@ -1,4 +1,4 @@
-const CONSTANT = {
+export const CONSTANT = {
   ASSET_TYPE: "image",
   GREETING: "Hello",
   WHO: "You",
@@ -8,5 +8,3 @@ const CONSTANT = {
   SIZE: 100,
   FILE_NAME: "cat-card.jpg"
 };
-
-module.exports = CONSTANT;

@@ -1,31 +1,58 @@
-const mergeImg = require("merge-img");
-const { MergeStrategy } = require("./mergeStrategy");
-const { Downloader } = require("../utils/downloadUtils");
-class ImageMergeStrategy extends MergeStrategy {
+import mergeImg from "merge-img";
+import { MergeStrategy } from "./mergeStrategy.js";
+import { Downloader } from "../utils/downloadUtils.js";
+
+export class ImageMergeStrategy extends MergeStrategy {
   constructor(greeting, who, width, height, color, size) {
     super(greeting, who, width, height, color, size);
+    this.firstFile;
   }
-  async merge() {
+
+  getFileSaveLocation() {
+    return process.env.FILE_SAVE_LOCATION;
+  }
+  async getDownloadedFiles() {
     try {
-      console.log("Starting to merge files");
+      console.log("Starting to download merge files");
       const firstReqUrl = this.buildImageUrl(this.greeting);
       const secondReqUrl = this.buildImageUrl(this.who);
-      console.log("First image url:", firstReqUrl);
-      console.log("Second image url:", secondReqUrl);
-      const firstBody = await Downloader.downloadFile(firstReqUrl);
-      const secondBody = await Downloader.downloadFile(secondReqUrl);
+      console.log("First image URL:", firstReqUrl);
+      console.log("Second image URL:", secondReqUrl);
+      const firstBody = await Downloader.downloadFile(firstReqUrl).catch(
+        (err) => {
+          console.error("Error while download first file:", err);
+          throw err;
+        }
+      );
+      const secondBody = await Downloader.downloadFile(secondReqUrl).catch(
+        (err) => {
+          console.error("Error while download second file:", err);
+          throw err;
+        }
+      );
 
       if (!firstBody || !secondBody) {
         console.log("First image data:", firstBody);
         console.log("Second image data:", secondBody);
         throw new Error("Image data not downloaded");
       }
-      const mergedImageBuffer = await this.mergeImagesBuffers(
-        firstBody,
-        secondBody
+
+      return [firstBody, secondBody];
+    } catch (error) {}
+  }
+
+  async merge(files) {
+    try {
+      console.log("Starting to merge files");
+
+      const mergedImageBuffer = await this.mergeImagesBuffers(files).catch(
+        (err) => {
+          console.error("An error occured while merging image buffers:", err);
+          throw err;
+        }
       );
-      console.log(
-        "Images merged successfully" );
+
+      console.log("Images merged successfully");
       return mergedImageBuffer;
     } catch (err) {
       throw new Error("Error while merging images: " + err.message);
@@ -38,16 +65,19 @@ class ImageMergeStrategy extends MergeStrategy {
     }&height=${this.height}&color=${this.color}&s=${this.size}`;
   }
 
-  async mergeImagesBuffers(firstImage, secondImage) {
+  async mergeImagesBuffers(files) {
     try {
       console.log("Starting to merge image buffers");
-      const mergedImageData = await mergeImg([
-        { src: Buffer.from(firstImage, "binary"), x: 0, y: 0 },
-        { src: Buffer.from(secondImage, "binary"), x: this.width, y: 0 },
-      ]);
+      const convertedFiles = files.map((f) => {
+        return { src: Buffer.from(f, "binary"), x: 0, y: 0 };
+      });
+      const mergedImageData = await mergeImg(convertedFiles).catch((err) => {
+        console.error("Error occured while merging images: " + err.message);
+        throw err;
+      });
       return await this.getImageBuffer(mergedImageData);
     } catch (err) {
-      throw new Error("Error while merging image buffers: " + err.message);
+      throw new Error("Error while merging images process: " + err.message);
     }
   }
 
@@ -58,11 +88,8 @@ class ImageMergeStrategy extends MergeStrategy {
           console.log("Failed to get image buffer:", err);
           return reject(err);
         }
-
-        return resolve(buffer);
+        resolve(buffer);
       });
     });
   }
 }
-
-module.exports = { ImageMergeStrategy };

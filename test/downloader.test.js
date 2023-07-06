@@ -1,39 +1,46 @@
-const { Downloader } = require("../utils/downloadUtils");
-const request = require('request-promise-native');
+import axios from 'axios';
+import { expect, jest } from '@jest/globals'
+import { Downloader } from "../utils/downloadUtils.js";
 
-jest.mock('request-promise-native', () => ({
-  get: jest.fn(),
-}));
 
-describe('Downloader', () => {
+// jest.mock('axios', () => {
+//   return {
+//     __esModule: true,
+//     default: jest.fn(),
+//     get: jest.fn()
+//    }
+// });
+//jest.spyOn(axios, 'default').mockRejectedValue(new Error(errorMessage));
+
+describe("Downloader", () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should successfully download file', async () => {
-    const url = 'https://example.com/file.png';
-    const expectedData = 'file data content';
-
-    request.get.mockResolvedValue(expectedData);
+  it("should successfully download file", async () => {
+    const url = "https://example.com/file.png";
+    const expectedData = "file data content";
+    axios.get.mockResolvedValue({ data: expectedData });
 
     const data = await Downloader.downloadFile(url);
 
-    expect(request.get).toHaveBeenCalledWith({ url, encoding: 'binary' });
+    expect(axios.get).toHaveBeenCalledWith(url, {
+      responseType: "arraybuffer",
+    });
     expect(data).toEqual(expectedData);
   });
 
-  it('should throw an error when download fails', async () => {
-    const url = 'https://example.com/file.png';
-    const errorMessage = 'Download failed';
+  it("should throw an error when download fails", async () => {
+    const url = "https://example.com/file.png";
+    const errorMessage = "Download failed";
+    axios.get.mockRejectedValue(new Error(errorMessage));
 
-    request.get.mockRejectedValue(new Error(errorMessage));
+    await expect(Downloader.downloadFile(url)).rejects.toThrowError(
+      `Error occurred while getting file data: ${errorMessage}`
+    );
 
-    try {
-      await Downloader.downloadFile(url);
-    } catch (err) {
-      expect(request.get).toHaveBeenCalledWith({ url, encoding: 'binary' });
-      expect(err.message).toContain('Error occured while getting file data');
-      expect(err.message).toContain(errorMessage);
-    }
+    expect(axios.get).toHaveBeenCalledWith(url, {
+      responseType: "arraybuffer",
+    });
   });
 });

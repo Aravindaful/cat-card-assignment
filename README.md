@@ -1,3 +1,12 @@
+## Version
+
+Current Version: 1.0.1
+
+### Version History
+
+- 1.0.1 (2023-07-06): Project compatability changed to ES6 Standard
+- 1.0.0 (2023-07-05): Initial release
+
 # Guide to run the application
 
 ## Install dependencies by executing below command
